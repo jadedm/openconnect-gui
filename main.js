@@ -31,7 +31,7 @@ function createSplashWindow() {
   if (isDev) {
     splashWindow.loadURL('http://localhost:5173/pages/splash.html');
   } else {
-    splashWindow.loadFile(path.join(__dirname, 'dist', 'splash.html'));
+    splashWindow.loadFile(path.join(__dirname, 'dist', 'pages', 'splash.html'));
   }
 
   splashWindow.center();
@@ -45,7 +45,7 @@ function createSplashWindow() {
 // Perform system checks
 async function performSystemChecks() {
   let progress = 0;
-  const totalChecks = 5;
+  const totalChecks = 6;
   const updateProgress = () => {
     progress++;
     const percent = Math.round((progress / totalChecks) * 100);
@@ -55,13 +55,13 @@ async function performSystemChecks() {
   };
 
   try {
-    // Check 1: Node.js environment
+    // Check 1: Electron runtime
     if (splashWindow) {
-      splashWindow.webContents.send('system-check-start', 'Node.js Environment');
+      splashWindow.webContents.send('system-check-start', 'Application Runtime');
     }
     await new Promise(resolve => setTimeout(resolve, 300));
     if (splashWindow) {
-      splashWindow.webContents.send('system-check-complete', 'Node.js Environment', true, `v${process.version}`);
+      splashWindow.webContents.send('system-check-complete', 'Application Runtime', true, `Electron v${process.versions.electron}`);
     }
     updateProgress();
 
@@ -99,7 +99,7 @@ async function performSystemChecks() {
       if (splashWindow) {
         splashWindow.webContents.send('system-check-complete', 'OpenConnect Binary', false, 'Not installed');
         splashWindow.webContents.send('splash-error', {
-          message: 'OpenConnect is not installed. Please install it to use this application.',
+          message: 'OpenConnect is not installed. Install with: brew install openconnect',
           action: 'install-openconnect'
         });
       }
@@ -107,11 +107,36 @@ async function performSystemChecks() {
       updateProgress();
       updateProgress();
       updateProgress();
+      updateProgress();
       return false;
     }
     updateProgress();
 
-    // Check 4: Network capabilities
+    // Check 4: Expect binary
+    if (splashWindow) {
+      splashWindow.webContents.send('system-check-start', 'Expect Binary');
+    }
+    await new Promise(resolve => setTimeout(resolve, 300));
+    const expectCheck = await checkExpect();
+    if (expectCheck.installed) {
+      if (splashWindow) {
+        splashWindow.webContents.send('system-check-complete', 'Expect Binary', true, expectCheck.path || 'Found');
+      }
+    } else {
+      if (splashWindow) {
+        splashWindow.webContents.send('system-check-complete', 'Expect Binary', false, 'Not installed');
+        splashWindow.webContents.send('splash-error', {
+          message: 'Expect is not installed. It should be pre-installed on macOS. Try: brew install expect',
+          action: null
+        });
+      }
+      updateProgress();
+      updateProgress();
+      return false;
+    }
+    updateProgress();
+
+    // Check 5: Network capabilities
     if (splashWindow) {
       splashWindow.webContents.send('system-check-start', 'Network Capabilities');
     }
@@ -121,13 +146,20 @@ async function performSystemChecks() {
     }
     updateProgress();
 
-    // Check 5: System permissions
+    // Check 6: Sudo privileges
     if (splashWindow) {
-      splashWindow.webContents.send('system-check-start', 'System Permissions');
+      splashWindow.webContents.send('system-check-start', 'Sudo Privileges');
     }
     await new Promise(resolve => setTimeout(resolve, 300));
-    if (splashWindow) {
-      splashWindow.webContents.send('system-check-warning', 'System Permissions', 'Sudo required for VPN');
+    const sudoCheck = await checkSudoAccess();
+    if (sudoCheck.available) {
+      if (splashWindow) {
+        splashWindow.webContents.send('system-check-complete', 'Sudo Privileges', true, 'User has sudo access');
+      }
+    } else {
+      if (splashWindow) {
+        splashWindow.webContents.send('system-check-warning', 'Sudo Privileges', 'Sudo required - will prompt when connecting');
+      }
     }
     updateProgress();
 
@@ -174,7 +206,7 @@ function createWindow() {
     // mainWindow.webContents.openDevTools();
   } else {
     // Production mode - load from built files
-    mainWindow.loadFile(path.join(__dirname, 'dist', 'index.html'));
+    mainWindow.loadFile(path.join(__dirname, 'dist', 'pages', 'index.html'));
   }
 
   // Prevent window close, minimize to tray instead
@@ -213,7 +245,7 @@ function createInstallerWindow() {
   if (isDev) {
     installerWindow.loadURL('http://localhost:5173/pages/installer-helper.html');
   } else {
-    installerWindow.loadFile(path.join(__dirname, 'dist', 'installer-helper.html'));
+    installerWindow.loadFile(path.join(__dirname, 'dist', 'pages', 'installer-helper.html'));
   }
 
   installerWindow.on('closed', () => {
@@ -251,6 +283,56 @@ function checkOpenConnect() {
       } else {
         resolve({ installed: false });
       }
+    });
+  });
+}
+
+// Check if expect is installed
+function checkExpect() {
+  return new Promise((resolve) => {
+    // Check for expect in common locations
+    const locations = [
+      '/usr/bin/expect',           // Standard macOS location
+      '/opt/homebrew/bin/expect',  // Homebrew (Apple Silicon)
+      '/usr/local/bin/expect',     // Homebrew (Intel Mac)
+    ];
+
+    // Check each location
+    for (const location of locations) {
+      if (fs.existsSync(location)) {
+        resolve({ installed: true, path: location });
+        return;
+      }
+    }
+
+    // Fallback to 'which' command
+    const checkProcess = spawn('which', ['expect']);
+    checkProcess.on('close', (code) => {
+      if (code === 0) {
+        resolve({ installed: true, path: 'expect' });
+      } else {
+        resolve({ installed: false });
+      }
+    });
+  });
+}
+
+// Check if user has sudo access
+function checkSudoAccess() {
+  return new Promise((resolve) => {
+    // Check if user is in admin/sudo group
+    // Note: This doesn't guarantee they know the password, just that they have potential access
+    const checkProcess = spawn('groups');
+    let output = '';
+
+    checkProcess.stdout.on('data', (data) => {
+      output += data.toString();
+    });
+
+    checkProcess.on('close', () => {
+      // Check if user is in admin or wheel group (common sudo groups on macOS)
+      const hasAdminAccess = output.includes('admin') || output.includes('wheel');
+      resolve({ available: hasAdminAccess });
     });
   });
 }
@@ -400,7 +482,11 @@ ipcMain.handle('connect-vpn', async (event, config) => {
     sendLog('[DEBUG] Sudo password received (length: ' + sudoPassword.length + ')', 'info');
 
     // Use expect script for proper PTY handling
-    const expectScriptPath = path.join(__dirname, 'vpn-connect.exp');
+    // In production, it's in extraResources; in dev, it's in project root
+    const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
+    const expectScriptPath = isDev
+      ? path.join(__dirname, 'vpn-connect.exp')
+      : path.join(process.resourcesPath, 'vpn-connect.exp');
 
     const expectArgs = [
       expectScriptPath,
@@ -730,7 +816,7 @@ async function promptForSudoPassword() {
     if (isDev) {
       promptWindow.loadURL('http://localhost:5173/pages/password-prompt.html');
     } else {
-      promptWindow.loadFile(path.join(__dirname, 'dist', 'password-prompt.html'));
+      promptWindow.loadFile(path.join(__dirname, 'dist', 'pages', 'password-prompt.html'));
     }
 
     ipcMain.once('sudo-password-entered', (event, password) => {

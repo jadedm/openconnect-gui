@@ -91,9 +91,12 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-background p-6">
+    <div className="h-screen bg-background flex flex-col overflow-hidden">
+      {/* Title bar spacer for macOS traffic lights */}
+      <div className="h-10 flex-shrink-0" style={{ WebkitAppRegion: 'drag' }} />
+
       {/* Header */}
-      <header className="mb-6 flex items-center justify-between">
+      <header className="px-6 pb-4 flex items-center justify-between flex-shrink-0">
         <h1 className="text-3xl font-bold">OpenConnect VPN</h1>
         <Badge variant={currentStatus === 'connected' ? 'default' : currentStatus === 'connecting' ? 'secondary' : 'outline'}>
           {currentStatus.charAt(0).toUpperCase() + currentStatus.slice(1)}
@@ -101,18 +104,20 @@ function App() {
       </header>
 
       {/* Main Content */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <ConnectionForm
-          profiles={profiles}
-          setProfiles={setProfiles}
-          currentStatus={currentStatus}
-          openConnectInstalled={openConnectInstalled}
-          showAlert={showAlert}
-          addLog={addLog}
-          saveProfiles={saveProfiles}
-          loadProfiles={loadProfiles}
-        />
-        <LogsPanel logs={logs} clearLogs={clearLogs} />
+      <div className="flex-1 px-6 pb-6 overflow-auto">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <ConnectionForm
+            profiles={profiles}
+            setProfiles={setProfiles}
+            currentStatus={currentStatus}
+            openConnectInstalled={openConnectInstalled}
+            showAlert={showAlert}
+            addLog={addLog}
+            saveProfiles={saveProfiles}
+            loadProfiles={loadProfiles}
+          />
+          <LogsPanel logs={logs} clearLogs={clearLogs} />
+        </div>
       </div>
 
       {/* Alert Box */}

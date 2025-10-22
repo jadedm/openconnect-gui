@@ -47,13 +47,18 @@
   },
   "build": {
     "appId": "com.openconnect.gui",
+    "productName": "OpenConnect VPN",
     "files": [
       "main.js",
       "preload.js",
-      "vpn-connect.exp",
-      "dist/**/*",
+      "dist/pages/**/*",
+      "dist/assets/**/*",
       "assets/**/*",
-      "scripts/**/*"
+      "scripts/**/*",
+      "!dist/mac-arm64",
+      "!dist/mac-x64",
+      "!dist/*.dmg",
+      "!dist/*.blockmap"
     ],
     "extraResources": [
       {
@@ -62,11 +67,16 @@
         "filter": [
           "**/*"
         ]
+      },
+      {
+        "from": "vpn-connect.exp",
+        "to": "vpn-connect.exp"
       }
     ],
     "mac": {
       "category": "public.app-category.utilities",
-      "target": "dmg"
+      "target": "dmg",
+      "icon": "build/icon.icns"
     }
   }
 }
