@@ -8,7 +8,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "electron:dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
+    "electron:dev": "concurrently \"vite\" \"wait-on http://localhost:5173/pages/index.html && electron .\"",
     "electron:build": "vite build && electron-builder",
     "start": "npm run electron:dev",
     "package": "npm run build && electron-builder"
@@ -50,9 +50,7 @@
     "files": [
       "main.js",
       "preload.js",
-      "splash.html",
-      "installer-helper.html",
-      "password-prompt.html",
+      "vpn-connect.exp",
       "dist/**/*",
       "assets/**/*",
       "scripts/**/*"

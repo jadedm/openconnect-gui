@@ -18,7 +18,6 @@ function createSplashWindow() {
     width: 600,
     height: 700,
     frame: false,
-    alwaysOnTop: true,
     resizable: false,
     webPreferences: {
       nodeIntegration: true,
@@ -152,13 +151,9 @@ async function performSystemChecks() {
 
 // Create main window
 function createWindow() {
-  const { screen } = require('electron');
-  const primaryDisplay = screen.getPrimaryDisplay();
-  const { width, height } = primaryDisplay.workAreaSize;
-
   mainWindow = new BrowserWindow({
-    width: width,
-    height: height,
+    width: 1400,
+    height: 900,
     show: false, // Don't show immediately
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -168,9 +163,6 @@ function createWindow() {
     titleBarStyle: 'hiddenInset',
     trafficLightPosition: { x: 10, y: 10 }
   });
-
-  // Maximize the window
-  mainWindow.maximize();
 
   // Load the app - in dev mode, load from vite server; in production, load from dist
   const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
