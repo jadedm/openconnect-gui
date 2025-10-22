@@ -30,7 +30,7 @@ function createSplashWindow() {
   const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 
   if (isDev) {
-    splashWindow.loadURL('http://localhost:5173/splash.html');
+    splashWindow.loadURL('http://localhost:5173/pages/splash.html');
   } else {
     splashWindow.loadFile(path.join(__dirname, 'dist', 'splash.html'));
   }
@@ -177,7 +177,7 @@ function createWindow() {
 
   if (isDev) {
     // Development mode - load from Vite dev server
-    mainWindow.loadURL('http://localhost:5173');
+    mainWindow.loadURL('http://localhost:5173/pages/index.html');
     // Open DevTools in development
     // mainWindow.webContents.openDevTools();
   } else {
@@ -219,7 +219,7 @@ function createInstallerWindow() {
   const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 
   if (isDev) {
-    installerWindow.loadURL('http://localhost:5173/installer-helper.html');
+    installerWindow.loadURL('http://localhost:5173/pages/installer-helper.html');
   } else {
     installerWindow.loadFile(path.join(__dirname, 'dist', 'installer-helper.html'));
   }
@@ -698,7 +698,7 @@ async function promptForSudoPassword() {
     const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 
     if (isDev) {
-      promptWindow.loadURL('http://localhost:5173/password-prompt.html');
+      promptWindow.loadURL('http://localhost:5173/pages/password-prompt.html');
     } else {
       promptWindow.loadFile(path.join(__dirname, 'dist', 'password-prompt.html'));
     }

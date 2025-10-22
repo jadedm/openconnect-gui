@@ -17,10 +17,10 @@ export default defineConfig({
     emptyOutDir: true,
     rollupOptions: {
       input: {
-        main: path.resolve(__dirname, 'index.html'),
-        splash: path.resolve(__dirname, 'splash.html'),
-        installer: path.resolve(__dirname, 'installer-helper.html'),
-        password: path.resolve(__dirname, 'password-prompt.html'),
+        main: path.resolve(__dirname, 'pages/index.html'),
+        splash: path.resolve(__dirname, 'pages/splash.html'),
+        installer: path.resolve(__dirname, 'pages/installer-helper.html'),
+        password: path.resolve(__dirname, 'pages/password-prompt.html'),
       },
       output: {
         entryFileNames: 'assets/[name]-[hash].js',
