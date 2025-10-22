@@ -1,0 +1,37 @@
+#!/usr/bin/expect -f
+
+set timeout 30
+set openconnect_path [lindex $argv 0]
+set sudo_password [lindex $argv 1]
+set username [lindex $argv 2]
+set vpn_password [lindex $argv 3]
+set args [lrange $argv 4 end]
+
+log_user 1
+
+# Start sudo openconnect
+eval spawn sudo -S $openconnect_path {*}$args
+
+# Send sudo password
+expect {
+    "Password:" {
+        send "$sudo_password\r"
+    }
+}
+
+# Wait for username prompt
+expect {
+    -re "(Please enter your username|Username:)" {
+        send "$username\r"
+    }
+}
+
+# Wait for password prompt
+expect {
+    -re "(Please enter your password|Password:)" {
+        send "$vpn_password\r"
+    }
+}
+
+# Keep the connection alive
+expect eof
