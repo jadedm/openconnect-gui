@@ -10,26 +10,59 @@ set args [lrange $argv 4 end]
 log_user 1
 
 # Start sudo openconnect
+puts "\[EXPECT\] Starting sudo openconnect..."
 eval spawn sudo -S $openconnect_path {*}$args
 
 # Send sudo password
+puts "\[EXPECT\] Waiting for sudo password prompt..."
 expect {
     "Password:" {
+        puts "\[EXPECT\] Sudo password prompt detected, sending password..."
         send "$sudo_password\r"
+        exp_continue
+    }
+    "Sorry, try again" {
+        puts "\[EXPECT ERROR\] Incorrect sudo password!"
+        exit 1
+    }
+    -re "(Please enter your username|Username:)" {
+        puts "\[EXPECT\] Sudo authentication successful, got username prompt"
+    }
+    timeout {
+        puts "\[EXPECT ERROR\] Timeout waiting for sudo password prompt"
+        exit 1
     }
 }
 
-# Wait for username prompt
-expect {
-    -re "(Please enter your username|Username:)" {
-        send "$username\r"
-    }
-}
+# Send username (already matched in previous expect)
+puts "\[EXPECT\] Sending VPN username..."
+send "$username\r"
 
 # Wait for password prompt
+puts "\[EXPECT\] Waiting for VPN password prompt..."
 expect {
     -re "(Please enter your password|Password:)" {
+        puts "\[EXPECT\] VPN password prompt detected, sending password..."
         send "$vpn_password\r"
+    }
+    timeout {
+        puts "\[EXPECT ERROR\] Timeout waiting for VPN password prompt"
+        exit 1
+    }
+}
+
+# Wait for connection or error
+puts "\[EXPECT\] Waiting for connection result..."
+expect {
+    -re "(CONNECTED|Established|Configured as)" {
+        puts "\[EXPECT\] VPN connection established!"
+    }
+    -re "(Login failed|authentication failed|Invalid username or password)" {
+        puts "\[EXPECT ERROR\] VPN authentication failed - invalid credentials"
+        exit 1
+    }
+    timeout {
+        puts "\[EXPECT\] Continuing connection (may be established)..."
     }
 }
 

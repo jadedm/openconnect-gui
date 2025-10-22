@@ -390,11 +390,14 @@ ipcMain.handle('connect-vpn', async (event, config) => {
     sendLog(`Executing: sudo openconnect ${args.join(' ')}`, 'info');
 
     // Request sudo password from user
+    sendLog('[DEBUG] Prompting for sudo password...', 'info');
     const sudoPassword = await promptForSudoPassword();
     if (!sudoPassword) {
+      sendLog('[ERROR] No sudo password provided by user', 'error');
       updateStatus('disconnected');
       return { success: false, error: 'Sudo password required' };
     }
+    sendLog('[DEBUG] Sudo password received (length: ' + sudoPassword.length + ')', 'info');
 
     // Use expect script for proper PTY handling
     const expectScriptPath = path.join(__dirname, 'vpn-connect.exp');
@@ -409,6 +412,7 @@ ipcMain.handle('connect-vpn', async (event, config) => {
     ];
 
     sendLog('[DEBUG] Using expect script for interactive authentication', 'info');
+    sendLog(`[DEBUG] Expect script path: ${expectScriptPath}`, 'info');
 
     const sudoProcess = spawn('expect', expectArgs, {
       stdio: ['pipe', 'pipe', 'pipe']
@@ -418,6 +422,7 @@ ipcMain.handle('connect-vpn', async (event, config) => {
 
     // Track connection status
     let connected = false;
+    let authError = false;
 
     // Handle stdout
     sudoProcess.stdout.on('data', (data) => {
@@ -436,6 +441,24 @@ ipcMain.handle('connect-vpn', async (event, config) => {
       const output = data.toString();
       sendLog(output);
 
+      // Check for sudo password errors
+      if (output.includes('[EXPECT ERROR] Incorrect sudo password')) {
+        authError = true;
+        sendLog('[ERROR] Sudo password authentication failed!', 'error');
+      }
+
+      // Check for VPN authentication errors
+      if (output.includes('[EXPECT ERROR] VPN authentication failed')) {
+        authError = true;
+        sendLog('[ERROR] VPN credentials are incorrect!', 'error');
+      }
+
+      // Check for timeout errors
+      if (output.includes('[EXPECT ERROR] Timeout')) {
+        authError = true;
+        sendLog('[ERROR] Connection timeout occurred', 'error');
+      }
+
       if ((output.includes('CONNECTED') || output.includes('Established') || output.includes('Configured as')) && !connected) {
         connected = true;
         updateStatus('connected');
@@ -450,13 +473,26 @@ ipcMain.handle('connect-vpn', async (event, config) => {
 
     // Handle process exit
     sudoProcess.on('close', (code) => {
-      sendLog(`OpenConnect process exited with code ${code}`);
+      sendLog(`[DEBUG] OpenConnect process exited with code ${code}`);
       openconnectProcess = null;
       updateStatus('disconnected');
 
       if (code !== 0 && code !== null) {
+        let errorMessage = `Connection closed with exit code ${code}`;
+
+        // Provide specific error messages based on context
+        if (authError) {
+          if (code === 1) {
+            errorMessage = 'Authentication failed. Please check your credentials.';
+          }
+        } else if (code === 1) {
+          errorMessage = 'Connection failed. This may be due to incorrect sudo password or network issues.';
+        }
+
+        sendLog(`[ERROR] ${errorMessage}`, 'error');
+
         if (mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.webContents.send('connection-error', `Connection closed with code ${code}`);
+          mainWindow.webContents.send('connection-error', errorMessage);
         }
       }
     });
@@ -672,6 +708,8 @@ function sendLog(message, type = 'info') {
 async function promptForSudoPassword() {
   return new Promise((resolve) => {
     // Create a simple dialog to get sudo password
+    sendLog('[DEBUG] Creating sudo password prompt window...', 'info');
+
     const promptWindow = new BrowserWindow({
       width: 520,
       height: 400,
@@ -696,17 +734,26 @@ async function promptForSudoPassword() {
     }
 
     ipcMain.once('sudo-password-entered', (event, password) => {
+      sendLog('[DEBUG] Sudo password entered by user', 'info');
       promptWindow.close();
       resolve(password);
     });
 
+    promptWindow.on('closed', () => {
+      sendLog('[DEBUG] Sudo password prompt window closed', 'info');
+      // If window was closed without entering password, resolve with null
+      resolve(null);
+    });
+
     promptWindow.once('ready-to-show', () => {
+      sendLog('[DEBUG] Sudo password prompt ready to show', 'info');
       promptWindow.show();
     });
 
     // Fallback: show after a short delay if ready-to-show doesn't fire
     setTimeout(() => {
       if (promptWindow && !promptWindow.isDestroyed() && !promptWindow.isVisible()) {
+        sendLog('[DEBUG] Showing sudo password prompt (fallback)', 'info');
         promptWindow.show();
       }
     }, 100);
