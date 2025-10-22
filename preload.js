@@ -13,6 +13,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   saveProfiles: (profiles) => ipcRenderer.invoke('save-profiles', profiles),
   loadProfiles: () => ipcRenderer.invoke('load-profiles'),
 
+  // Process management
+  checkRunningProcesses: () => ipcRenderer.invoke('check-running-processes'),
+
   // Event listeners
   onStatusChanged: (callback) => {
     ipcRenderer.on('status-changed', (event, status) => callback(status));

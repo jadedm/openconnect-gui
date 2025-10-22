@@ -552,6 +552,27 @@ ipcMain.handle('check-openconnect', async () => {
   return checkOpenConnect();
 });
 
+// Check for running openconnect processes
+ipcMain.handle('check-running-processes', async () => {
+  return new Promise((resolve) => {
+    // Look for actual openconnect VPN processes, not the GUI app
+    exec('ps aux | grep -E "sudo.*openconnect|/usr.*openconnect|/opt.*openconnect" | grep -v grep | grep -v "openconnect-gui"', (error, stdout, stderr) => {
+      if (error && error.code !== 1) {
+        // Code 1 means no processes found, which is not an error
+        resolve({ success: false, error: stderr || error.message, processes: [] });
+        return;
+      }
+
+      const processes = stdout.trim().split('\n').filter(line => line.length > 0);
+      resolve({
+        success: true,
+        processes: processes,
+        count: processes.length
+      });
+    });
+  });
+});
+
 // Install OpenConnect via the bundled script
 ipcMain.handle('install-openconnect', async () => {
   return new Promise((resolve) => {
