@@ -41,13 +41,36 @@ A modern, native macOS application for managing OpenConnect VPN connections, bui
 
 ## Installation (End Users)
 
-Download the latest `.dmg` file from releases and install:
+### Download
+
+Download the latest `.dmg` file from [Releases](https://github.com/jadedm/openconnect-gui/releases/latest)
+
+### Install
 
 1. Open the DMG file
 2. Drag "OpenConnect VPN" to your Applications folder
-3. Launch the app
+3. **Important**: Remove quarantine attribute (app is unsigned)
 
-**Required Dependencies:**
+### ⚠️ First Launch - Bypass Security Warning
+
+macOS will show **"OpenConnect VPN is damaged"** because the app is not code-signed.
+
+**Choose one method:**
+
+**Method 1: Terminal (Recommended)**
+```bash
+xattr -cr "/Applications/OpenConnect VPN.app"
+```
+Then launch the app normally from Applications.
+
+**Method 2: Right-Click**
+1. Right-click (or Control+click) on "OpenConnect VPN" in Applications
+2. Click "Open"
+3. Click "Open" again in the security dialog
+
+**You only need to do this once.** Subsequent launches will work normally.
+
+### Required Dependencies
 
 The app will verify these on first launch:
 
