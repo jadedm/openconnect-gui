@@ -1,12 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Separator } from './ui/separator';
+import { Info, ScrollText } from 'lucide-react';
 
 function LogsPanel({ logs, clearLogs }) {
   const logsContainerRef = useRef(null);
-  const [runningProcesses, setRunningProcesses] = useState([]);
-  const [checkingProcesses, setCheckingProcesses] = useState(false);
 
   // Auto-scroll to bottom when new logs are added
   useEffect(() => {
@@ -25,31 +23,14 @@ function LogsPanel({ logs, clearLogs }) {
     });
   };
 
-  const checkProcesses = async () => {
-    setCheckingProcesses(true);
-    try {
-      const result = await window.electronAPI.checkRunningProcesses();
-      if (result.success) {
-        setRunningProcesses(result.processes);
-      } else {
-        setRunningProcesses([]);
-      }
-    } catch (error) {
-      console.error('Error checking processes:', error);
-      setRunningProcesses([]);
-    } finally {
-      setCheckingProcesses(false);
-    }
-  };
-
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0">
-        <CardTitle>Connection Logs</CardTitle>
+        <div className="flex items-center gap-2">
+          <ScrollText className="h-5 w-5" />
+          <CardTitle>Connection Logs</CardTitle>
+        </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={checkProcesses} disabled={checkingProcesses}>
-            {checkingProcesses ? 'Checking...' : 'Check Status'}
-          </Button>
           <Button variant="outline" size="sm" onClick={copyLogs} disabled={logs.length === 0}>
             Copy
           </Button>
@@ -59,6 +40,28 @@ function LogsPanel({ logs, clearLogs }) {
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Informational Section */}
+        <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 rounded-lg p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+            <h3 className="font-semibold text-blue-900 dark:text-blue-100 text-sm">About Connection Logs</h3>
+          </div>
+          <div className="text-xs text-blue-800 dark:text-blue-200 space-y-2">
+            <p>
+              This section provides a complete history of all VPN connection events, including authentication attempts, connection status changes, and error messages.
+            </p>
+            <div className="mt-2">
+              <p className="font-medium mb-1">How to use:</p>
+              <ul className="list-disc list-inside space-y-0.5 ml-2">
+                <li>Review detailed connection flow and timing information</li>
+                <li>Identify authentication or network errors</li>
+                <li>Copy logs to share with support or for troubleshooting</li>
+                <li>Clear logs to start fresh when needed</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
         <div className="h-[450px] overflow-y-auto rounded-md border bg-muted/50 p-4 font-mono text-sm" ref={logsContainerRef}>
           {logs.length === 0 ? (
             <div className="flex gap-2 text-muted-foreground">
@@ -77,58 +80,6 @@ function LogsPanel({ logs, clearLogs }) {
               ))}
             </div>
           )}
-        </div>
-
-        <Separator />
-
-        {/* Running Processes Section */}
-        <div className="space-y-2">
-          <h3 className="text-sm font-semibold">Running OpenConnect Processes</h3>
-          <div className="rounded-md border bg-muted/50">
-            {runningProcesses.length === 0 ? (
-              <div className="p-3 text-xs text-muted-foreground">No running processes found. Click "Check Status" to scan.</div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-xs font-mono">
-                  <thead>
-                    <tr className="border-b bg-muted">
-                      <th className="p-2 text-left font-semibold">User</th>
-                      <th className="p-2 text-left font-semibold">PID</th>
-                      <th className="p-2 text-left font-semibold">CPU%</th>
-                      <th className="p-2 text-left font-semibold">MEM%</th>
-                      <th className="p-2 text-left font-semibold">Status</th>
-                      <th className="p-2 text-left font-semibold">Time</th>
-                      <th className="p-2 text-left font-semibold">Command</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {runningProcesses.map((process, index) => {
-                      const parts = process.trim().split(/\s+/);
-                      const user = parts[0] || '';
-                      const pid = parts[1] || '';
-                      const cpu = parts[2] || '';
-                      const mem = parts[3] || '';
-                      const status = parts[7] || '';
-                      const time = parts[9] || '';
-                      const command = parts.slice(10).join(' ') || '';
-
-                      return (
-                        <tr key={index} className="border-b last:border-0">
-                          <td className="p-2">{user}</td>
-                          <td className="p-2">{pid}</td>
-                          <td className="p-2">{cpu}</td>
-                          <td className="p-2">{mem}</td>
-                          <td className="p-2">{status}</td>
-                          <td className="p-2">{time}</td>
-                          <td className="p-2 break-all">{command}</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
         </div>
       </CardContent>
     </Card>

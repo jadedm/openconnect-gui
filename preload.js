@@ -15,6 +15,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // Process management
   checkRunningProcesses: () => ipcRenderer.invoke('check-running-processes'),
+  killProcess: (pid, sudoPassword) => ipcRenderer.invoke('kill-process', pid, sudoPassword),
+
+  // Network diagnostics
+  getRoutes: () => ipcRenderer.invoke('get-routes'),
+  testConnectivity: (host, port) => ipcRenderer.invoke('test-connectivity', host, port),
+  deleteRoute: (destination, sudoPassword) => ipcRenderer.invoke('delete-route', destination, sudoPassword),
+  getNetworkInterfaces: () => ipcRenderer.invoke('get-network-interfaces'),
 
   // Event listeners
   onStatusChanged: (callback) => {

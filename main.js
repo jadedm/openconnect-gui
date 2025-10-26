@@ -468,6 +468,11 @@ ipcMain.handle('connect-vpn', async (event, config) => {
       args.push(`--authgroup=${config.authgroup}`);
     }
 
+    // Add stability and reconnection options
+    args.push('--reconnect-timeout', '60'); // Try to reconnect for 60 seconds
+    args.push('--dtls-ciphers', 'DEFAULT'); // Use default DTLS ciphers
+    args.push('--verbose'); // More detailed logging
+
     // Log the command being executed (without password)
     sendLog(`Executing: sudo openconnect ${args.join(' ')}`, 'info');
 
@@ -559,7 +564,9 @@ ipcMain.handle('connect-vpn', async (event, config) => {
 
     // Handle process exit
     sudoProcess.on('close', (code) => {
-      sendLog(`[DEBUG] OpenConnect process exited with code ${code}`);
+      const exitTime = new Date().toLocaleTimeString();
+      sendLog(`[DEBUG] OpenConnect process exited with code ${code} at ${exitTime}`);
+
       openconnectProcess = null;
       updateStatus('disconnected');
 
@@ -579,6 +586,16 @@ ipcMain.handle('connect-vpn', async (event, config) => {
 
         if (mainWindow && !mainWindow.isDestroyed()) {
           mainWindow.webContents.send('connection-error', errorMessage);
+        }
+      } else if (code === 0 && connected) {
+        // Clean exit while connected - this is unexpected
+        sendLog(`[WARNING] VPN disconnected cleanly. This may be due to:`, 'error');
+        sendLog(`  - Network interruption or timeout`, 'error');
+        sendLog(`  - Server-side disconnect (idle timeout, policy, etc.)`, 'error');
+        sendLog(`  - MTU/DTLS issues`, 'error');
+
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('connection-error', 'VPN disconnected. Check logs for details.');
         }
       }
     });
@@ -687,6 +704,82 @@ ipcMain.handle('check-running-processes', async () => {
   });
 });
 
+// Kill a process by PID
+ipcMain.handle('kill-process', async (event, pid, sudoPassword) => {
+  return new Promise((resolve) => {
+    if (!pid) {
+      resolve({ success: false, error: 'PID is required' });
+      return;
+    }
+
+    // Validate PID is a positive integer (prevent command injection)
+    const pidNumber = parseInt(pid, 10);
+    if (!Number.isInteger(pidNumber) || pidNumber <= 0 || pidNumber.toString() !== pid.toString()) {
+      resolve({ success: false, error: 'Invalid PID format' });
+      return;
+    }
+
+    if (!sudoPassword) {
+      resolve({
+        success: false,
+        error: 'Sudo password required to kill processes',
+        needsSudo: true
+      });
+      return;
+    }
+
+    // Use spawn with sudo -S to pass password via stdin
+    // PID is validated as integer, safe to use in command
+    const sudoProcess = spawn('sudo', ['-S', 'kill', '-9', pidNumber.toString()], {
+      stdio: ['pipe', 'pipe', 'pipe']
+    });
+
+    let stdout = '';
+    let stderr = '';
+
+    sudoProcess.stdout.on('data', (data) => {
+      stdout += data.toString();
+    });
+
+    sudoProcess.stderr.on('data', (data) => {
+      stderr += data.toString();
+    });
+
+    sudoProcess.on('close', (code) => {
+      if (code === 0) {
+        resolve({ success: true, message: `Process ${pid} killed successfully` });
+      } else {
+        // Check for common error messages
+        if (stderr.includes('Sorry, try again') || stderr.includes('incorrect password')) {
+          resolve({
+            success: false,
+            error: 'Incorrect sudo password',
+            incorrectPassword: true
+          });
+        } else if (stderr.includes('No such process')) {
+          resolve({
+            success: false,
+            error: `Process ${pid} not found or already terminated`
+          });
+        } else {
+          resolve({
+            success: false,
+            error: stderr || `Failed to kill process with exit code ${code}`
+          });
+        }
+      }
+    });
+
+    sudoProcess.on('error', (error) => {
+      resolve({ success: false, error: error.message });
+    });
+
+    // Send password to sudo
+    sudoProcess.stdin.write(sudoPassword + '\n');
+    sudoProcess.stdin.end();
+  });
+});
+
 // Install OpenConnect via the bundled script
 ipcMain.handle('install-openconnect', async () => {
   return new Promise((resolve) => {
@@ -718,6 +811,237 @@ ipcMain.handle('install-openconnect', async () => {
 // Open Terminal
 ipcMain.on('open-terminal', () => {
   shell.openPath('/System/Applications/Utilities/Terminal.app');
+});
+
+// Network diagnostics: Get routing table
+ipcMain.handle('get-routes', async () => {
+  return new Promise((resolve) => {
+    exec('netstat -rn', (error, stdout, stderr) => {
+      if (error) {
+        resolve({ success: false, error: stderr || error.message });
+        return;
+      }
+
+      // Parse routing table
+      const lines = stdout.split('\n');
+      const routes = [];
+      let inInternetSection = false;
+
+      for (const line of lines) {
+        if (line.includes('Internet:')) {
+          inInternetSection = true;
+          continue;
+        }
+        if (line.includes('Internet6:')) {
+          inInternetSection = false;
+          break;
+        }
+        if (inInternetSection && line.trim() && !line.includes('Destination')) {
+          const parts = line.trim().split(/\s+/);
+          if (parts.length >= 4) {
+            routes.push({
+              destination: parts[0],
+              gateway: parts[1],
+              flags: parts[2],
+              interface: parts[3]
+            });
+          }
+        }
+      }
+
+      resolve({ success: true, routes });
+    });
+  });
+});
+
+// Network diagnostics: Test connectivity to a host
+ipcMain.handle('test-connectivity', async (event, host, port) => {
+  return new Promise((resolve) => {
+    if (!host || !port) {
+      resolve({ success: false, error: 'Host and port are required' });
+      return;
+    }
+
+    // Validate port is a number between 1-65535
+    const portNumber = parseInt(port, 10);
+    if (!Number.isInteger(portNumber) || portNumber < 1 || portNumber > 65535) {
+      resolve({ success: false, error: 'Invalid port number' });
+      return;
+    }
+
+    // Validate host format (basic hostname/IP validation)
+    // Allow alphanumeric, dots, hyphens, and colons (for IPv6)
+    const validHostPattern = /^[a-zA-Z0-9\.\-:]+$/;
+    if (!validHostPattern.test(host)) {
+      resolve({ success: false, error: 'Invalid host format' });
+      return;
+    }
+
+    const timeout = 5000;
+    // Use spawn instead of exec to prevent command injection
+    const ncProcess = spawn('nc', ['-zv', '-G', '5', host, portNumber.toString()], {
+      stdio: ['pipe', 'pipe', 'pipe']
+    });
+
+    let stdout = '';
+    let stderr = '';
+
+    ncProcess.stdout.on('data', (data) => {
+      stdout += data.toString();
+    });
+
+    ncProcess.stderr.on('data', (data) => {
+      stderr += data.toString();
+    });
+
+    ncProcess.on('close', (code) => {
+      const output = stdout + stderr;
+      const success = code === 0 && (output.includes('succeeded') || output.includes('open'));
+
+      resolve({
+        success,
+        host,
+        port: portNumber,
+        message: output.trim(),
+        reachable: success
+      });
+    });
+
+    ncProcess.on('error', (error) => {
+      resolve({
+        success: false,
+        host,
+        port: portNumber,
+        message: error.message,
+        reachable: false
+      });
+    });
+
+    // Set timeout
+    setTimeout(() => {
+      if (!ncProcess.killed) {
+        ncProcess.kill();
+        resolve({
+          success: false,
+          host,
+          port: portNumber,
+          message: 'Connection timed out',
+          reachable: false
+        });
+      }
+    }, timeout);
+  });
+});
+
+// Network diagnostics: Delete a route
+ipcMain.handle('delete-route', async (event, destination, sudoPassword) => {
+  return new Promise((resolve) => {
+    if (!destination) {
+      resolve({ success: false, error: 'Destination is required' });
+      return;
+    }
+
+    // Validate destination format to prevent command injection
+    // Allow: IP addresses, CIDR notation, or "default"
+    const validDestinationPattern = /^(default|(\d{1,3}\.){3}\d{1,3}(\/\d{1,2})?)$/;
+    if (!validDestinationPattern.test(destination)) {
+      resolve({ success: false, error: 'Invalid destination format' });
+      return;
+    }
+
+    if (!sudoPassword) {
+      resolve({
+        success: false,
+        error: 'Sudo password required',
+        needsSudo: true
+      });
+      return;
+    }
+
+    // Use spawn with sudo -S to pass password via stdin
+    // Destination is validated, safe to use in command
+    const sudoProcess = spawn('sudo', ['-S', 'route', 'delete', destination], {
+      stdio: ['pipe', 'pipe', 'pipe']
+    });
+
+    let stdout = '';
+    let stderr = '';
+
+    sudoProcess.stdout.on('data', (data) => {
+      stdout += data.toString();
+    });
+
+    sudoProcess.stderr.on('data', (data) => {
+      stderr += data.toString();
+    });
+
+    sudoProcess.on('close', (code) => {
+      if (code === 0) {
+        resolve({ success: true, message: `Route to ${destination} deleted` });
+      } else {
+        // Check for common error messages
+        if (stderr.includes('Sorry, try again') || stderr.includes('incorrect password')) {
+          resolve({
+            success: false,
+            error: 'Incorrect sudo password',
+            incorrectPassword: true
+          });
+        } else {
+          resolve({
+            success: false,
+            error: stderr || `Failed with exit code ${code}`
+          });
+        }
+      }
+    });
+
+    sudoProcess.on('error', (error) => {
+      resolve({ success: false, error: error.message });
+    });
+
+    // Send password to sudo
+    sudoProcess.stdin.write(sudoPassword + '\n');
+    sudoProcess.stdin.end();
+  });
+});
+
+// Network diagnostics: Get network interfaces
+ipcMain.handle('get-network-interfaces', async () => {
+  return new Promise((resolve) => {
+    exec('ifconfig', (error, stdout, stderr) => {
+      if (error) {
+        resolve({ success: false, error: stderr || error.message });
+        return;
+      }
+
+      // Parse interfaces - simplified version
+      const interfaces = [];
+      const sections = stdout.split(/\n(?=[a-z])/);
+
+      for (const section of sections) {
+        const lines = section.split('\n');
+        const firstLine = lines[0];
+        if (!firstLine) continue;
+
+        const nameMatch = firstLine.match(/^([a-z0-9]+):/);
+        if (!nameMatch) continue;
+
+        const name = nameMatch[1];
+        const statusMatch = section.match(/status: (\w+)/);
+        const inetMatch = section.match(/inet (\d+\.\d+\.\d+\.\d+)/);
+
+        if (inetMatch || statusMatch) {
+          interfaces.push({
+            name,
+            status: statusMatch ? statusMatch[1] : 'unknown',
+            ip: inetMatch ? inetMatch[1] : null
+          });
+        }
+      }
+
+      resolve({ success: true, interfaces });
+    });
+  });
 });
 
 // Handle successful OpenConnect installation

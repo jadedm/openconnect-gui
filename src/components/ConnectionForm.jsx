@@ -4,7 +4,7 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Settings } from 'lucide-react';
 
 function ConnectionForm({
   profiles,
@@ -14,7 +14,8 @@ function ConnectionForm({
   showAlert,
   addLog,
   saveProfiles,
-  loadProfiles
+  loadProfiles,
+  onServerChange
 }) {
   const [formData, setFormData] = useState({
     profileName: '',
@@ -30,6 +31,11 @@ function ConnectionForm({
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+
+    // Notify parent when server URL changes
+    if (name === 'serverUrl' && onServerChange) {
+      onServerChange(value);
+    }
   };
 
   const handleProfileSelect = (profileName) => {
@@ -47,6 +53,9 @@ function ConnectionForm({
         serverCert: ''
       });
       setSelectedProfile('__new__');
+      if (onServerChange) {
+        onServerChange('');
+      }
       return;
     }
 
@@ -61,6 +70,9 @@ function ConnectionForm({
         protocol: profile.protocol || 'anyconnect',
         serverCert: profile.serverCert || ''
       });
+      if (onServerChange) {
+        onServerChange(profile.server);
+      }
     }
   };
 
@@ -172,7 +184,10 @@ function ConnectionForm({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Connection Settings</CardTitle>
+        <div className="flex items-center gap-2">
+          <Settings className="h-5 w-5" />
+          <CardTitle>Connection Settings</CardTitle>
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Profile Selection */}
@@ -299,7 +314,7 @@ function ConnectionForm({
               value={formData.serverCert}
               onChange={handleInputChange}
             />
-            <p className="text-xs text-muted-foreground">Example: pin-sha256:MTFwCY40eCnV9d8G/pbGRpKys9WMhKoTF2gK1BTOff0=</p>
+            <p className="text-xs text-muted-foreground">Example: pin-sha256:AAAA1111BBB2222CCC3333DDD4444EEE5555FFF6666=</p>
           </div>
 
           <div className="flex flex-wrap gap-2">

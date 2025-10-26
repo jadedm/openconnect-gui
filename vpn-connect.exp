@@ -25,8 +25,16 @@ expect {
         puts "\[EXPECT ERROR\] Incorrect sudo password!"
         exit 1
     }
+    -re "(Failed to connect|Failed to open|connection failed|Connection refused)" {
+        puts "\[EXPECT ERROR\] Network connection failed before authentication"
+        exit 1
+    }
     -re "(Please enter your username|Username:)" {
         puts "\[EXPECT\] Sudo authentication successful, got username prompt"
+    }
+    eof {
+        puts "\[EXPECT ERROR\] OpenConnect process ended unexpectedly"
+        exit 1
     }
     timeout {
         puts "\[EXPECT ERROR\] Timeout waiting for sudo password prompt"
@@ -66,5 +74,16 @@ expect {
     }
 }
 
-# Keep the connection alive
-expect eof
+# Keep the connection alive and log when it ends
+puts "\[EXPECT\] Connection established, monitoring..."
+
+# Set timeout to -1 (infinite) to keep connection alive indefinitely
+set timeout -1
+
+expect {
+    eof {
+        puts "\[EXPECT\] OpenConnect process ended (EOF received)"
+    }
+}
+
+puts "\[EXPECT\] Expect script exiting..."
