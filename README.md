@@ -606,3 +606,9 @@ MIT
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
+
+---
+
+**Built by [Manish Jadhav](https://manishj.com)**, engineer & technical consultant.
+
+Need something like this designed or built? [Inoltro](https://inoltro.ai) is my studio.
