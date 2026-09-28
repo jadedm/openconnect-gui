@@ -43,7 +43,7 @@ The published build is not code-signed, so macOS reports "OpenConnect VPN is dam
 xattr -cr "/Applications/OpenConnect VPN.app"
 ```
 
-Or right-click the app in Applications, choose Open, then Open again in the dialog. Later launches work normally.
+Later launches work normally. The right-click Open workaround does not help with this message.
 
 ## Usage
 
@@ -56,7 +56,7 @@ The window has four tabs: Connection, Logs, Diagnostics and Processes.
    - Username and password
    - Protocol (defaults to AnyConnect)
    - Group or authgroup, if your server uses one
-   - Server certificate, if you need to pin it, for example `pin-sha256:...`. It is passed to `openconnect --servercert`. Avoid spaces, `[`, `]`, `$` and `;` in the server, group and certificate fields until [#10](https://github.com/jadedm/openconnect-gui/issues/10) is fixed.
+   - Server certificate, if you need to pin it, for example `pin-sha256:...`. It is passed to `openconnect --servercert`. Do not put spaces or any of `[ ] { } $ ; " \` in the server, group and certificate fields until [#10](https://github.com/jadedm/openconnect-gui/issues/10) is fixed.
 2. Click Connect. The app opens its own window asking for your macOS password, which it needs to run OpenConnect with `sudo`.
 3. The status badge moves from Disconnected to Connecting to Connected, and the IP in the header updates.
 
@@ -76,21 +76,21 @@ Delete asks for your sudo password and runs `sudo route delete <destination>`. I
 
 ### Processes
 
-The Processes tab loads when you first open it and lists running processes whose command line matches `sudo ... openconnect`, `/usr/...openconnect` or `/opt/...openconnect`. One connection from this app shows as several rows (sudo, openconnect and the connection script), and the badge on the tab counts all of them ([#13](https://github.com/jadedm/openconnect-gui/issues/13)). Kill asks for your sudo password and sends `SIGKILL`, which drops that VPN connection immediately.
+Each time you open the Processes tab it lists running processes whose command line matches `sudo ... openconnect`, `/usr/...openconnect` or `/opt/...openconnect`. One connection from this app shows as several rows (sudo, openconnect and the connection script), and the badge on the tab counts all of them ([#13](https://github.com/jadedm/openconnect-gui/issues/13)). Kill asks for your sudo password and sends `SIGKILL`, which drops that VPN connection immediately.
 
 In the installed app this tab currently shows your sudo password, VPN username and VPN password while you are connected. Do not open it while sharing your screen until [#4](https://github.com/jadedm/openconnect-gui/issues/4) is fixed.
 
 ### Logs
 
-The Logs tab shows all OpenConnect output as it arrives. Lines from the connection script start with `[EXPECT]`, errors with `[ERROR]` and debug detail with `[DEBUG]`. It keeps the last 500 lines. Copy puts them on the clipboard; Clear removes them and leaves a single "Logs cleared" line.
+The Logs tab shows all OpenConnect output as it arrives. Lines from the connection script start with `[EXPECT]`, errors with `[ERROR]` and debug detail with `[DEBUG]`. It keeps the last 500 entries (an entry can span several lines). Copy puts them on the clipboard; Clear removes them and leaves a single "Logs cleared" line.
 
 ## Troubleshooting
 
-**Startup check fails.** Install OpenConnect with `brew install openconnect`. `expect` should be at `/usr/bin/expect`. The checks stop at the first failure, so fix it and relaunch to see the rest. A missing admin membership is only a warning.
+**Startup check fails.** Install OpenConnect with `brew install openconnect`. `expect` should be at `/usr/bin/expect`. A missing OpenConnect or `expect` stops the remaining checks, so fix it and relaunch to see the rest. A missing admin membership is only a warning.
 
-**"Connection failed. This may be due to incorrect sudo password or network issues."** The app shows this one message for every failed connect ([#9](https://github.com/jadedm/openconnect-gui/issues/9)). The Logs tab has the real cause on an `[EXPECT ERROR]` line:
+**"Connection failed. This may be due to incorrect sudo password or network issues."** The app shows this message whenever the connection exits with code 1, and "Connection closed with exit code N" for other codes, whatever the cause ([#9](https://github.com/jadedm/openconnect-gui/issues/9)). The Logs tab has the real cause on an `[EXPECT ERROR]` line:
 
-- `Incorrect sudo password`: enter your macOS login password, not the VPN password.
+- `Incorrect sudo password`, or `OpenConnect process ended unexpectedly` straight after the sudo prompt: enter your macOS login password, not the VPN password.
 - `VPN authentication failed`: check the VPN username and password, the server URL, and the certificate pin if you set one.
 - `Network connection failed before authentication` or `Timeout waiting for ...`: the server did not answer. Check the URL and try Diagnostics.
 
@@ -110,7 +110,7 @@ sudo pkill -9 openconnect   # all of them
 
 ## Security and your data
 
-Saved profiles, passwords included, are plaintext in `profiles.json` in the app's folder under `~/Library/Application Support/`. Leave the password empty before saving to keep it out of the file. Your macOS password is asked for each time and never saved.
+Saved profiles, passwords included, are plaintext in `profiles.json` in the app's folder under `~/Library/Application Support/`. Leave the password empty before saving to keep it out of the file. Your macOS password is asked for each time and never written to disk. The app looks up your public IP address from api.ipify.org when it starts and whenever the connection status changes.
 
 The app has open security issues, including one that shows your passwords in the Processes tab of the installed app ([#4](https://github.com/jadedm/openconnect-gui/issues/4)). [SECURITY.md](SECURITY.md) lists them, explains how credentials are handled, and says how to report a new one privately.
 

@@ -31,14 +31,14 @@ npm run build && npx electron-builder --mac dmg --x64  # Intel, from any Mac
 
 `npm run package` builds for the architecture of the Mac it runs on. The Intel command needs `npm run build` first, because `electron-builder` on its own packages whatever is already in `dist/`.
 
-The app icon comes from `build/icon.icns`. The build config sets no signing identity, so the DMG is signed only if your keychain has a Developer ID certificate that `electron-builder` finds on its own.
+The app icon is `build/icon.icns`, which `.gitignore` currently excludes, so a fresh clone builds without it ([#29](https://github.com/jadedm/openconnect-gui/issues/29)). The build config sets no signing identity, so the DMG is signed only if your keychain has a Developer ID certificate that `electron-builder` finds on its own.
 
 Some behaviour differs between `npm start` and the packaged app, because packaged code loads `dist/pages/` and finds `vpn-connect.exp` under `process.resourcesPath`. Test anything touching startup, paths or the connection script in a packaged build too.
 
 ## How the app is put together
 
 - `main.js` is the Electron main process: windows, the menu bar icon, startup checks, and every IPC handler (connect, disconnect, profiles, routes, processes, installer).
-- `preload.js` is the bridge for the main window. A new IPC handler needs an entry here before the React side can call it.
+- `preload.js` is the bridge for the main window. A new IPC handler needs an entry here before the main window can call it. The splash, installer and password windows call `ipcRenderer` directly for now ([#12](https://github.com/jadedm/openconnect-gui/issues/12)).
 - `src/` is the React UI. `pages/` holds four HTML entry points (main window, splash, installer helper, sudo password prompt), each mounting one component from `src/`.
 
 ### How a connection works
@@ -53,7 +53,7 @@ Disconnect closes the script's input, sends `SIGINT`, and force-kills it after f
 
 - One change per pull request, linked to its issue.
 - Run `npm run build` before pushing. There is no test suite or linter yet, so also say in the PR what you ran by hand: for anything on the connection path, a real connect and disconnect against a VPN server, and which protocol.
-- System commands go through `spawn()` with an argument array. Validate anything from the UI before it reaches `sudo`.
+- New system commands go through `spawn()` with an argument array (four older ones still use `exec()`, see [SECURITY.md](SECURITY.md)). Validate anything from the UI before it reaches `sudo`.
 - Never put credentials in logs, screenshots or the PR description.
 - For docs: plain sentences, no emojis, and every statement about the app should be true of the code.
 
