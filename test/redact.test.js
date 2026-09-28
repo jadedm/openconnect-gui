@@ -74,6 +74,23 @@ test('a token value containing & is masked to its end', () => {
   assert.equal(out, 'sending webvpnc=<redacted> now');
 });
 
+test('more cookie names and forms are masked', () => {
+  const cases = {
+    'MRHSession=S1; F5_ST=S2': 'MRHSession=<redacted>; F5_ST=<redacted>',
+    'prelogin-cookie=S3 session-token=S4': 'prelogin-cookie=<redacted> session-token=<redacted>',
+    'SVPNCOOKIE = S5': 'SVPNCOOKIE = <redacted>',
+    "COOKIE='S6'": "COOKIE='<redacted>'",
+    'authcookie="S7"': 'authcookie="<redacted>"',
+    '<authcookie>S8</authcookie>': '<authcookie><redacted></authcookie>',
+  };
+  for (const [input, expected] of Object.entries(cases)) assert.equal(redactLog(input), expected, input);
+});
+
+test('a URL password containing / or @ is masked', () => {
+  assert.equal(redactLog('https://alice:pa/ss@h/x'), 'https://<redacted>@h/x');
+  assert.equal(redactLog('https://alice:p@ss@h:443/g'), 'https://<redacted>@h:443/g');
+});
+
 test('a cookie quoted in free text is replaced', () => {
   assert.equal(
     redactLog('Got new DSPREAUTH cookie from TNCC: 0123456789abcdef'),

@@ -89,7 +89,7 @@ A hotfix is the same, except you cut `hotfix/<x.y.z>` from `main` in step 1. If 
 ## Pull requests
 
 - One change per pull request, linked to its issue, based on `develop`.
-- Run `npm run build` and `npm test` before pushing. `npm test` runs `test:unit` (log redaction, with Node's built-in test runner) and `test:expect`, which runs `vpn-connect.exp` against a fake `sudo` and checks the exact arguments openconnect would receive. There is no linter yet and nothing tests the UI, so also say in the PR what you ran by hand: for anything on the connection path, a real connect and disconnect against a VPN server, and which protocol.
+- Run `npm run build` and `npm test` before pushing. `npm test` runs `test:unit` (log redaction, log line buffering and checks on `main.js`, with Node's built-in test runner) and `test:expect`, which runs `vpn-connect.exp` against a fake `sudo` and checks the exact arguments openconnect would receive. There is no linter yet and nothing tests the UI, so also say in the PR what you ran by hand: for anything on the connection path, a real connect and disconnect against a VPN server, and which protocol.
 - New system commands go through `spawn()` with an argument array (four older ones still use `exec()`, see [SECURITY.md](SECURITY.md)). Validate anything from the UI before it reaches `sudo`.
 - Never put credentials in logs, screenshots or the PR description.
 - For docs: plain sentences, no emojis, and every statement about the app should be true of the code.

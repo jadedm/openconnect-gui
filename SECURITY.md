@@ -22,7 +22,7 @@ The app runs `openconnect` under `sudo`, so it handles two secrets: your macOS p
 
 - The main window runs with context isolation and reaches the main process only through the functions in `preload.js`.
 - Connection fields and credentials are never interpreted as code or options on the way to openconnect: each field arrives as one argument, changed only by trimming surrounding spaces and adding `https://` to a bare server name. `npm run test:expect` checks this against hostile values.
-- The Logs tab masks session cookies (`Set-Cookie`, `Cookie`, `webvpn…=` values) before showing any line, and openconnect runs without `--verbose`, so HTTP headers are not printed at all. `npm run test:unit` checks the masking.
+- The Logs tab masks session cookies (cookie and authorization headers, the session cookie names of the seven supported protocols, and passwords inside URLs) in every line that comes from openconnect or the connection script, and openconnect runs without `--verbose`, so HTTP headers are not printed at all. `npm run test:unit` checks the masking.
 - Process IDs must be numeric, and route destinations must be `default` or four dot-separated numbers with an optional prefix length, before they reach `sudo`.
 - Most system commands run through `spawn()` with argument arrays. Four use `exec()` with a shell string: the process list, the routing table, the interface list and the OpenConnect installer launcher. The installer string includes the app's install path; none of them include anything you type.
 

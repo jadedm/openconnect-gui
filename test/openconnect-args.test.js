@@ -7,10 +7,15 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const mainSource = fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8');
-const code = mainSource.replace(/\/\/.*$/gm, '');
+// Drop whole-line comments only; a trailing // would also cut https:// strings.
+const code = mainSource.replace(/^\s*\/\/.*$/gm, '');
 
-test('main.js does not pass --verbose or -v to openconnect', () => {
-  assert.doesNotMatch(code, /['"`](?:--verbose|-v)['"`]/);
+test('main.js does not pass --verbose, -v, -vv or similar to openconnect', () => {
+  assert.doesNotMatch(code, /['"`](?:--verbose|-v+)['"`]/);
+});
+
+test('sendLog masks every message before it reaches the window', () => {
+  assert.match(code, /'log-message',\s*\{\s*message:\s*redactLog\(message\)/);
 });
 
 test('process output is logged through the line buffers, not chunk by chunk', () => {
