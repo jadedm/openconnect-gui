@@ -25,7 +25,7 @@ Running OpenConnect processes, with a Kill button that asks for your sudo passwo
 
 ## Install
 
-1. Download the `.dmg` from [Releases](https://github.com/jadedm/openconnect-gui/releases). The published build is for Apple Silicon; on an Intel Mac, build it yourself (see Development).
+1. Download the `.dmg` from [Releases](https://github.com/jadedm/openconnect-gui/releases). The published build is for Apple Silicon; on an Intel Mac, build it yourself ([CONTRIBUTING.md](CONTRIBUTING.md#build-the-dmg)).
 2. Open it and drag "OpenConnect VPN" into Applications.
 3. Install OpenConnect if you do not have it:
 
@@ -108,79 +108,29 @@ sudo pkill -9 openconnect   # all of them
 
 **Connect fails at once in the installed app with an `expect` error about a missing file.** The connection script should be at `/Applications/OpenConnect VPN.app/Contents/Resources/vpn-connect.exp`. If it is missing, the package is broken; rebuild or download again.
 
-## Security and data
+## Security and your data
 
-Profiles are saved as `profiles.json` in the app's folder under `~/Library/Application Support/`. Running from source, that folder is `openconnect-gui`. The file holds server addresses, usernames and passwords in plaintext.
+Saved profiles, passwords included, are plaintext in `profiles.json` in the app's folder under `~/Library/Application Support/`. Leave the password empty before saving to keep it out of the file. Your macOS password is asked for each time and never saved.
 
-What the app does today:
-
-- The main window runs with context isolation and reaches the main process only through the functions in `preload.js`.
-- The sudo password is asked for on every connect, kill and route delete, and is not saved.
-- Process IDs must be numeric, and route destinations must be `default` or four dot-separated numbers with an optional prefix length, before they reach `sudo`.
-- Most system commands run through `spawn()` with argument arrays. Four use `exec()` with a shell string: the process list, the routing table, the interface list and the OpenConnect installer launcher. The installer string includes the app's install path; none of them include anything you type.
-
-Known weaknesses, each with a ticket:
-
-- While connected, the sudo password, VPN username and VPN password are passed to the connection script as command-line arguments. Another user on the same Mac can read them with `ps`, and the installed app shows them in its own Processes tab. See [#4](https://github.com/jadedm/openconnect-gui/issues/4).
-- Saved passwords are plaintext. See [#6](https://github.com/jadedm/openconnect-gui/issues/6).
-- The connection script re-reads the server, group and certificate fields as Tcl code, so special characters in them can run commands as your user. See [#10](https://github.com/jadedm/openconnect-gui/issues/10).
-- The splash, installer and sudo password windows run with Node.js access and without context isolation. See [#12](https://github.com/jadedm/openconnect-gui/issues/12).
+The app has open security issues, including one that shows your passwords in the Processes tab of the installed app ([#4](https://github.com/jadedm/openconnect-gui/issues/4)). [SECURITY.md](SECURITY.md) lists them, explains how credentials are handled, and says how to report a new one privately.
 
 ## Limitations
 
 - macOS only. The connection flow depends on `expect` and `sudo`.
 - The published build is unsigned, so the first launch needs the step above.
-- Username and password only. No certificate login, and no 2FA prompts yet ([#5](https://github.com/jadedm/openconnect-gui/issues/5)).
-- Reconnect is limited to what OpenConnect does itself: it retries a dropped connection for 60 seconds (`--reconnect-timeout 60`). After that the connection ends and you reconnect by hand.
-- One connection at a time.
-- The menu bar icon cannot connect or disconnect; its Connect item is disabled.
+- Username and password only. No 2FA prompts yet ([#5](https://github.com/jadedm/openconnect-gui/issues/5)) and no [certificate login](https://github.com/jadedm/openconnect-gui/discussions/15).
+- Reconnect is limited to what OpenConnect does itself: it retries a dropped connection for 60 seconds. After that you reconnect by hand ([idea](https://github.com/jadedm/openconnect-gui/discussions/17)).
+- [One connection at a time](https://github.com/jadedm/openconnect-gui/discussions/26).
+- The menu bar icon [cannot connect or disconnect](https://github.com/jadedm/openconnect-gui/discussions/25).
 - Light theme only.
 
-## Ideas not yet ticketed
+## Roadmap and ideas
 
-- Certificate login
-- Encrypted profile import and export
-- Reconnect after OpenConnect gives up, and after a network change
-- Custom `vpnc-script` and split tunnelling settings
-- DNS leak test, latency and MTU checks in Diagnostics
-- Connection history, pinned profiles, keyboard shortcuts, notifications
-- Connect and disconnect from the menu bar
-
-Open a [Discussion](https://github.com/jadedm/openconnect-gui/discussions) to argue for one.
-
-## Development
-
-Needs Node.js 22 (the exact version is in `.nvmrc`), npm, and the OpenConnect install above.
-
-```bash
-git clone https://github.com/jadedm/openconnect-gui.git
-cd openconnect-gui
-npm install        # also generates the menu bar icon
-npm start          # Vite on http://localhost:5173 plus Electron
-```
-
-`npm start` hot-reloads the React side. Changes to `main.js`, `preload.js` or `vpn-connect.exp` need a restart. Main process logs print in the terminal you ran it from; open the window's developer tools with Cmd+Option+I.
-
-There is no test suite or linter. `npm run build` is the only automated check.
-
-### Build the DMG
-
-```bash
-npm run package                                        # this Mac's architecture, written to dist/
-npm run build && npx electron-builder --mac dmg --x64  # Intel, from any Mac
-```
-
-`npm run package` builds for the architecture of the Mac it runs on. The Intel command needs `npm run build` first, because `electron-builder` on its own packages whatever is already in `dist/`.
-
-The app icon comes from `build/icon.icns`. The build config sets no signing identity, so the DMG is signed only if your keychain has a Developer ID certificate that `electron-builder` finds on its own.
-
-### How a connection works
-
-`main.js` builds the `openconnect` arguments from the form and asks for the sudo password in its own window (`pages/password-prompt.html`). It then runs `vpn-connect.exp`, an `expect` script that starts `sudo -S openconnect` in a pseudo-terminal and answers the sudo, username and password prompts in order. The status badge turns Connected when OpenConnect's own output says `CONNECTED`, `Established` or `Configured as`. The script also prints `[EXPECT]` and `[EXPECT ERROR]` lines; they reach the Logs tab, but `main.js` looks for the error lines on the wrong stream, so the alert after a failure depends only on the exit code ([#9](https://github.com/jadedm/openconnect-gui/issues/9)). Disconnect closes the script's input, sends `SIGINT`, and force-kills it after five seconds.
+Planned work is in [issues labelled `enhancement`](https://github.com/jadedm/openconnect-gui/issues?q=is%3Aissue+is%3Aopen+label%3Aenhancement). Ideas that are not planned yet live in [Discussions: Ideas](https://github.com/jadedm/openconnect-gui/discussions/categories/ideas); upvote the ones you want or start a new one.
 
 ## Contributing
 
-Pull requests are welcome. For anything larger than a fix, open an issue or a Discussion first.
+Bug reports, fixes and ideas are welcome. [CONTRIBUTING.md](CONTRIBUTING.md) covers where each goes, how to build the app from source, and how it is put together. Questions go in [Discussions: Q&A](https://github.com/jadedm/openconnect-gui/discussions/categories/q-a).
 
 ## License
 
