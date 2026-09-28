@@ -49,9 +49,34 @@ The status badge turns Connected when OpenConnect's own output says `CONNECTED`,
 
 Disconnect closes the script's input, sends `SIGINT`, and force-kills it after five seconds.
 
+## Branches
+
+The project uses gitflow. `develop` is the default branch and holds finished work. `main` holds released code only; the Releases page is built from it.
+
+| Branch | Start from | Merge into |
+|---|---|---|
+| `feature/<issue>-<slug>`, `bugfix/…`, `docs/…`, `chore/…`, `refactor/…`, `ci/…` | `develop` | `develop`, squash merge |
+| `release/<x.y.z>` | `develop` | `main` with a merge commit, then `main` back into `develop` |
+| `hotfix/<x.y.z>` | `main` | `main` with a merge commit, then `main` back into `develop` |
+
+For example, a fix for issue 42 goes on `bugfix/42-short-description`. If you work from a fork, branch from your fork's `develop` and open the pull request against `develop` here.
+
+Both `main` and `develop` only accept changes through pull requests, and neither can be force-pushed or deleted.
+
+### Releasing (maintainers)
+
+1. Cut `release/<x.y.z>` from `develop`.
+2. Set `version` in `package.json`. Until [#33](https://github.com/jadedm/openconnect-gui/issues/33) is fixed, also change the version in `src/App.jsx` and `src/Splash.jsx`.
+3. Update `RELEASE_NOTES.md`, then open a pull request into `main`.
+4. Merge it with a merge commit, not a squash, so `main` and `develop` keep the same history.
+5. Tag the merge commit `v<x.y.z>`, build the DMG with `npm run package`, and publish a GitHub release with the DMG attached.
+6. Open a pull request from `main` into `develop` and merge it with a merge commit, so the version bump reaches `develop`.
+
+A hotfix follows the same steps, starting from `main` instead of `develop`.
+
 ## Pull requests
 
-- One change per pull request, linked to its issue.
+- One change per pull request, linked to its issue, based on `develop`.
 - Run `npm run build` before pushing. There is no test suite or linter yet, so also say in the PR what you ran by hand: for anything on the connection path, a real connect and disconnect against a VPN server, and which protocol.
 - New system commands go through `spawn()` with an argument array (four older ones still use `exec()`, see [SECURITY.md](SECURITY.md)). Validate anything from the UI before it reaches `sudo`.
 - Never put credentials in logs, screenshots or the PR description.
