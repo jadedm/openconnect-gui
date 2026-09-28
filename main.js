@@ -2,6 +2,7 @@ const { app, BrowserWindow, ipcMain, Tray, Menu, dialog, shell } = require('elec
 const { spawn, exec } = require('child_process');
 const path = require('path');
 const fs = require('fs');
+const { redactLog } = require('./lib/redact');
 
 let mainWindow;
 let splashWindow;
@@ -471,7 +472,7 @@ ipcMain.handle('connect-vpn', async (event, config) => {
     // Add stability and reconnection options
     args.push('--reconnect-timeout', '60'); // Try to reconnect for 60 seconds
     args.push('--dtls-ciphers', 'DEFAULT'); // Use default DTLS ciphers
-    args.push('--verbose'); // More detailed logging
+    // No --verbose: it prints HTTP headers, including session cookies (#37).
 
     // Log the command being executed (without password)
     sendLog(`Executing: sudo openconnect ${args.join(' ')}`, 'info');
@@ -484,7 +485,7 @@ ipcMain.handle('connect-vpn', async (event, config) => {
       updateStatus('disconnected');
       return { success: false, error: 'Sudo password required' };
     }
-    sendLog('[DEBUG] Sudo password received (length: ' + sudoPassword.length + ')', 'info');
+    sendLog('[DEBUG] Sudo password received', 'info');
 
     // Use expect script for proper PTY handling
     // In production, it's in extraResources; in dev, it's in project root
@@ -605,7 +606,7 @@ ipcMain.handle('connect-vpn', async (event, config) => {
       openconnectProcess = null;
       updateStatus('disconnected');
       if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send('connection-error', error.message);
+        mainWindow.webContents.send('connection-error', redactLog(error.message));
       }
     });
 
@@ -1111,7 +1112,7 @@ function updateStatus(status) {
 
 function sendLog(message, type = 'info') {
   if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.webContents.send('log-message', { message, type, timestamp: new Date().toISOString() });
+    mainWindow.webContents.send('log-message', { message: redactLog(message), type, timestamp: new Date().toISOString() });
   }
 }
 
