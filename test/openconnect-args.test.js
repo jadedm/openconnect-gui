@@ -13,6 +13,12 @@ test('main.js does not pass --verbose or -v to openconnect', () => {
   assert.doesNotMatch(code, /['"`](?:--verbose|-v)['"`]/);
 });
 
+test('process output is logged through the line buffers, not chunk by chunk', () => {
+  assert.doesNotMatch(code, /sendLog\(\s*output\s*\)/);
+  assert.match(code, /stdoutLog\.write\(output\)/);
+  assert.match(code, /stderrLog\.write\(output\)/);
+});
+
 test('main.js still builds the arguments this test reads', () => {
   assert.match(code, /args\.push\(\s*['"`]--dtls-ciphers['"`]/);
 });

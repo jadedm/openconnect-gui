@@ -69,6 +69,11 @@ test('session cookies of the other protocols are replaced', () => {
   assert.match(out, /^DSID=<redacted>; DSPREAUTH=<redacted> /);
 });
 
+test('a token value containing & is masked to its end', () => {
+  const out = redactLog('sending webvpnc=bu:/&p:t&iu:1/&sh:SECRETHASH now');
+  assert.equal(out, 'sending webvpnc=<redacted> now');
+});
+
 test('a cookie quoted in free text is replaced', () => {
   assert.equal(
     redactLog('Got new DSPREAUTH cookie from TNCC: 0123456789abcdef'),
