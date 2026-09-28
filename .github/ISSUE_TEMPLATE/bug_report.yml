@@ -1,0 +1,96 @@
+name: Bug report
+description: Something in the app does not work as described.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Security problems do not go here. Report them privately as described in [SECURITY.md](https://github.com/jadedm/openconnect-gui/blob/develop/SECURITY.md).
+
+        Check the [open bugs](https://github.com/jadedm/openconnect-gui/issues?q=is%3Aissue+is%3Aopen+label%3Abug) first; yours may already be there.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what you saw instead. Include the exact alert text if there was one.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open the Connection tab
+        2. ...
+    validations:
+      required: true
+  - type: input
+    id: app-version
+    attributes:
+      label: App version
+      description: The release you downloaded, or the commit if you run from source.
+      placeholder: v1.0.0
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: How you run the app
+      options:
+        - Installed from the DMG on the Releases page
+        - From source with npm start
+        - A DMG I built myself
+    validations:
+      required: true
+  - type: input
+    id: macos
+    attributes:
+      label: macOS version
+      placeholder: "15.3"
+    validations:
+      required: true
+  - type: dropdown
+    id: chip
+    attributes:
+      label: Mac chip
+      options:
+        - Apple Silicon
+        - Intel
+    validations:
+      required: true
+  - type: input
+    id: openconnect
+    attributes:
+      label: OpenConnect version
+      description: Output of `openconnect --version`, first line.
+    validations:
+      required: true
+  - type: dropdown
+    id: protocol
+    attributes:
+      label: VPN protocol
+      options:
+        - AnyConnect (Cisco)
+        - Juniper Network Connect
+        - GlobalProtect (Palo Alto)
+        - Pulse Connect Secure
+        - F5 Big-IP
+        - Fortinet
+        - Array Networks
+        - Not connection related
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: |
+        Relevant lines from the Logs tab. Remove usernames, passwords, server names and IP addresses first. Also delete any line that shows the sudo password length.
+      render: text
+  - type: checkboxes
+    id: redacted
+    attributes:
+      label: Before you submit
+      options:
+        - label: I removed usernames, passwords, server names and IP addresses from everything above.
+          required: true

@@ -134,7 +134,7 @@ Bug reports, fixes and ideas are welcome. [CONTRIBUTING.md](CONTRIBUTING.md) cov
 
 ## License
 
-MIT
+[MIT](LICENSE)
 
 ---
 

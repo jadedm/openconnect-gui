@@ -94,4 +94,4 @@ A hotfix is the same, except you cut `hotfix/<x.y.z>` from `main` in step 1. If 
 - Never put credentials in logs, screenshots or the PR description.
 - For docs: plain sentences, no emojis, and every statement about the app should be true of the code.
 
-By contributing you agree your work is released under the project's MIT licence.
+By contributing you agree your work is released under the project's [MIT licence](LICENSE).
