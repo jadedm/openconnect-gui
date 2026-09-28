@@ -50,11 +50,15 @@ run_case() {
   PATH="$tmp/bin:$PATH" FAKE_OUT="$out" FAKE_SUDO_CACHED="$cached" \
     expect "$script" "$oc" "$sudo_pw" "$vpn_user" "$vpn_pw" "$@" > "$log" 2>&1 &
   local pid=$!
-  ( sleep 20; kill "$pid" 2>/dev/null ) &
-  local watchdog=$!
+  # Stop a hung run after 20 seconds. Polls instead of one long sleep, so no
+  # stray sleep outlives the case and holds a piped test run open.
+  local waited=0
+  while kill -0 "$pid" 2>/dev/null && [ "$waited" -lt 200 ]; do
+    sleep 0.1
+    waited=$((waited + 1))
+  done
+  kill "$pid" 2>/dev/null
   wait "$pid" 2>/dev/null
-  kill "$watchdog" 2>/dev/null
-  wait "$watchdog" 2>/dev/null
 
   local expected=(-S "$oc" "$@")
   local got=()
@@ -125,6 +129,9 @@ run_case metachar-path "$tmp/br[a]ce\$x;{y/openconnect" --protocol=anyconnect "$
 
 vpn_user=-alice; vpn_pw=-secret; sudo_pw=-sudo
 run_case dash-credentials "$oc" --protocol=anyconnect "$server" "${base[@]}"
+
+sudo_pw='s [pwd] $x {'; vpn_user='a b$[x]{y}\\'; vpn_pw='p w$env(HOME)[exec id]{"'
+run_case tcl-in-credentials "$oc" --protocol=anyconnect "$server" "${base[@]}"
 
 cached=1
 run_case sudo-already-authenticated "$oc" --protocol=anyconnect "$server" "${base[@]}"
