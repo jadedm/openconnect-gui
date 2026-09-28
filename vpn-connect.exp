@@ -9,16 +9,18 @@ set args [lrange $argv 4 end]
 
 log_user 1
 
-# Start sudo openconnect
+# Start sudo openconnect. {*} passes each list element as one argument, as is.
+# Never wrap this in eval: that re-parses the values as Tcl, so a space in a
+# form field adds openconnect options (run as root) and brackets run commands.
 puts "\[EXPECT\] Starting sudo openconnect..."
-eval spawn sudo -S $openconnect_path {*}$args
+spawn sudo -S $openconnect_path {*}$args
 
 # Send sudo password
 puts "\[EXPECT\] Waiting for sudo password prompt..."
 expect {
     "Password:" {
         puts "\[EXPECT\] Sudo password prompt detected, sending password..."
-        send "$sudo_password\r"
+        send -- "$sudo_password\r"
         exp_continue
     }
     "Sorry, try again" {
@@ -44,14 +46,14 @@ expect {
 
 # Send username (already matched in previous expect)
 puts "\[EXPECT\] Sending VPN username..."
-send "$username\r"
+send -- "$username\r"
 
 # Wait for password prompt
 puts "\[EXPECT\] Waiting for VPN password prompt..."
 expect {
     -re "(Please enter your password|Password:)" {
         puts "\[EXPECT\] VPN password prompt detected, sending password..."
-        send "$vpn_password\r"
+        send -- "$vpn_password\r"
     }
     timeout {
         puts "\[EXPECT ERROR\] Timeout waiting for VPN password prompt"

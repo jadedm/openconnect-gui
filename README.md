@@ -56,7 +56,7 @@ The window has four tabs: Connection, Logs, Diagnostics and Processes.
    - Username and password
    - Protocol (defaults to AnyConnect)
    - Group or authgroup, if your server uses one
-   - Server certificate, if you need to pin it, for example `pin-sha256:...`. It is passed to `openconnect --servercert`. Do not put spaces or any of `[ ] { } $ ; " \` in the server, group and certificate fields until [#10](https://github.com/jadedm/openconnect-gui/issues/10) is fixed.
+   - Server certificate, if you need to pin it, for example `pin-sha256:...`. It is passed to `openconnect --servercert`.
 2. Click Connect. The app opens its own window asking for your macOS password, which it needs to run OpenConnect with `sudo`.
 3. The status badge moves from Disconnected to Connecting to Connected, and the IP in the header updates.
 
@@ -90,7 +90,7 @@ The Logs tab shows all OpenConnect output as it arrives. Lines from the connecti
 
 **"Connection failed. This may be due to incorrect sudo password or network issues."** The app shows this message whenever the connection exits with code 1, and "Connection closed with exit code N" for other codes, whatever the cause ([#9](https://github.com/jadedm/openconnect-gui/issues/9)). The Logs tab has the real cause on an `[EXPECT ERROR]` line:
 
-- `Incorrect sudo password`, or `OpenConnect process ended unexpectedly` straight after the sudo prompt: enter your macOS login password, not the VPN password.
+- `OpenConnect process ended unexpectedly` straight after the sudo prompt: usually a wrong sudo password ([#9](https://github.com/jadedm/openconnect-gui/issues/9) makes this say so). Enter your macOS login password, not the VPN password.
 - `VPN authentication failed`: check the VPN username and password, the server URL, and the certificate pin if you set one.
 - `Network connection failed before authentication` or `Timeout waiting for ...`: the server did not answer. Check the URL and try Diagnostics.
 
