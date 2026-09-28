@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Feature idea
+    url: https://github.com/jadedm/openconnect-gui/discussions/categories/ideas
+    about: Suggest a feature or upvote an existing idea in Discussions.
+  - name: Question about using the app
+    url: https://github.com/jadedm/openconnect-gui/discussions/categories/q-a
+    about: Ask in Discussions Q&A.
+  - name: Security vulnerability
+    url: https://github.com/jadedm/openconnect-gui/security/advisories/new
+    about: Report privately. Do not open a public issue.

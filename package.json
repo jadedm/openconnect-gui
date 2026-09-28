@@ -19,7 +19,7 @@
     "electron",
     "macos"
   ],
-  "author": "",
+  "author": "Manish Jadhav",
   "license": "MIT",
   "dependencies": {
     "@radix-ui/react-label": "^2.0.2",
