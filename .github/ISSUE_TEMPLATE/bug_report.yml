@@ -85,12 +85,12 @@ body:
     attributes:
       label: Logs
       description: |
-        Relevant lines from the Logs tab. Remove usernames, passwords, server names and IP addresses first. Also delete any line that shows the sudo password length.
+        Relevant lines from the Logs tab. Remove usernames, passwords, server names, IP addresses, the group and certificate values on the `Executing:` line, and your Mac login name in file paths. Also delete any line that shows the sudo password length.
       render: text
   - type: checkboxes
     id: redacted
     attributes:
       label: Before you submit
       options:
-        - label: I removed usernames, passwords, server names and IP addresses from everything above.
+        - label: I removed usernames, passwords, server names, IP addresses, group and certificate values, and my Mac login name from everything above.
           required: true
