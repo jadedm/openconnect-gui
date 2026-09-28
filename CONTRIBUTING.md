@@ -49,9 +49,46 @@ The status badge turns Connected when OpenConnect's own output says `CONNECTED`,
 
 Disconnect closes the script's input, sends `SIGINT`, and force-kills it after five seconds.
 
+## Branches
+
+The project uses gitflow. `develop` is the default branch and holds finished work. From v1.1.0 on, `main` holds only released code, and every release is built from it.
+
+| Branch | Start from | Merge into |
+|---|---|---|
+| `feature/<issue>-<slug>`, `bugfix/…`, `docs/…`, `chore/…`, `refactor/…`, `ci/…` | `develop` | `develop`, squash merge |
+| `release/<x.y.z>` | `develop` | `main` with a merge commit, then `main` back into `develop` |
+| `hotfix/<x.y.z>` | `main` | `main` with a merge commit, then `main` back into `develop` |
+
+For example, a fix for issue 42 goes on `bugfix/42-short-description`. If you work from a fork, branch from your fork's `develop` and open the pull request against `develop` here.
+
+Both `main` and `develop` only accept changes through pull requests, and neither can be force-pushed or deleted.
+
+### Releasing (maintainers)
+
+1. Cut `release/<x.y.z>` from `develop`.
+2. Set `version` in `package.json`. Until [#33](https://github.com/jadedm/openconnect-gui/issues/33) is fixed, also change the version in `src/App.jsx` and `src/Splash.jsx`.
+3. Add a section for the new version at the top of `RELEASE_NOTES.md`, then open a pull request into `main`. `main` accepts only merge commits.
+4. Build the DMG from a clean checkout of the merged `main`, on an Apple Silicon Mac, with automatic signing off so the build matches the unsigned instructions in the README:
+
+   ```bash
+   git fetch origin && git checkout --detach origin/main
+   npm ci
+   CSC_IDENTITY_AUTO_DISCOVERY=false npm run package
+   ```
+
+   Until [#29](https://github.com/jadedm/openconnect-gui/issues/29) is fixed, copy `build/icon.icns` into the checkout first, because it is not in the repository.
+5. Create the tag and a full release (not a pre-release) in one step, which tags the current `main`:
+
+   ```bash
+   gh release create v<x.y.z> --target main --title "v<x.y.z>" --notes-file <notes for this version> dist/*.dmg
+   ```
+6. Open a pull request from `main` into `develop` and merge it with **Create a merge commit**, not squash. `develop` allows both, and a squash here leaves the release merge out of `develop`'s history, so every later release pull request shows commits that are already on `main`.
+
+A hotfix is the same, except you cut `hotfix/<x.y.z>` from `main` in step 1. If a `release/*` branch is open at the time, also merge the hotfix into it.
+
 ## Pull requests
 
-- One change per pull request, linked to its issue.
+- One change per pull request, linked to its issue, based on `develop`.
 - Run `npm run build` before pushing. There is no test suite or linter yet, so also say in the PR what you ran by hand: for anything on the connection path, a real connect and disconnect against a VPN server, and which protocol.
 - New system commands go through `spawn()` with an argument array (four older ones still use `exec()`, see [SECURITY.md](SECURITY.md)). Validate anything from the UI before it reaches `sudo`.
 - Never put credentials in logs, screenshots or the PR description.
