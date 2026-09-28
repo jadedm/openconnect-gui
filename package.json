@@ -11,7 +11,8 @@
     "electron:dev": "concurrently \"vite\" \"wait-on http://localhost:5173/pages/index.html && electron .\"",
     "electron:build": "vite build && electron-builder",
     "start": "npm run electron:dev",
-    "package": "npm run build && electron-builder"
+    "package": "npm run build && electron-builder",
+    "test:expect": "bash test/vpn-connect.test.sh"
   },
   "keywords": [
     "openconnect",
