@@ -2,6 +2,8 @@ const { app, BrowserWindow, ipcMain, Tray, Menu, dialog, shell } = require('elec
 const { spawn, exec } = require('child_process');
 const path = require('path');
 const fs = require('fs');
+const { redactLog } = require('./lib/redact');
+const { createLineLogger } = require('./lib/line-logger');
 
 let mainWindow;
 let splashWindow;
@@ -471,7 +473,7 @@ ipcMain.handle('connect-vpn', async (event, config) => {
     // Add stability and reconnection options
     args.push('--reconnect-timeout', '60'); // Try to reconnect for 60 seconds
     args.push('--dtls-ciphers', 'DEFAULT'); // Use default DTLS ciphers
-    args.push('--verbose'); // More detailed logging
+    // No --verbose: it prints HTTP headers, including session cookies (#37).
 
     // Log the command being executed (without password)
     sendLog(`Executing: sudo openconnect ${args.join(' ')}`, 'info');
@@ -484,7 +486,7 @@ ipcMain.handle('connect-vpn', async (event, config) => {
       updateStatus('disconnected');
       return { success: false, error: 'Sudo password required' };
     }
-    sendLog('[DEBUG] Sudo password received (length: ' + sudoPassword.length + ')', 'info');
+    sendLog('[DEBUG] Sudo password received', 'info');
 
     // Use expect script for proper PTY handling
     // In production, it's in extraResources; in dev, it's in project root
@@ -515,10 +517,15 @@ ipcMain.handle('connect-vpn', async (event, config) => {
     let connected = false;
     let authError = false;
 
+    // Log whole lines only, so redaction never sees a secret cut in half (#37).
+    // Status checks below still read each raw chunk.
+    const stdoutLog = createLineLogger((text) => sendLog(text));
+    const stderrLog = createLineLogger((text) => sendLog(text));
+
     // Handle stdout
     sudoProcess.stdout.on('data', (data) => {
       const output = data.toString();
-      sendLog(output);
+      stdoutLog.write(output);
 
       if ((output.includes('CONNECTED') || output.includes('Established') || output.includes('Configured as')) && !connected) {
         connected = true;
@@ -530,7 +537,7 @@ ipcMain.handle('connect-vpn', async (event, config) => {
     // Handle stderr - this is where OpenConnect output appears
     sudoProcess.stderr.on('data', (data) => {
       const output = data.toString();
-      sendLog(output);
+      stderrLog.write(output);
 
       // Check for sudo password errors
       if (output.includes('[EXPECT ERROR] Incorrect sudo password')) {
@@ -564,6 +571,8 @@ ipcMain.handle('connect-vpn', async (event, config) => {
 
     // Handle process exit
     sudoProcess.on('close', (code) => {
+      stdoutLog.flush();
+      stderrLog.flush();
       const exitTime = new Date().toLocaleTimeString();
       sendLog(`[DEBUG] OpenConnect process exited with code ${code} at ${exitTime}`);
 
@@ -605,7 +614,7 @@ ipcMain.handle('connect-vpn', async (event, config) => {
       openconnectProcess = null;
       updateStatus('disconnected');
       if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send('connection-error', error.message);
+        mainWindow.webContents.send('connection-error', redactLog(error.message));
       }
     });
 
@@ -1111,7 +1120,7 @@ function updateStatus(status) {
 
 function sendLog(message, type = 'info') {
   if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.webContents.send('log-message', { message, type, timestamp: new Date().toISOString() });
+    mainWindow.webContents.send('log-message', { message: redactLog(message), type, timestamp: new Date().toISOString() });
   }
 }
 

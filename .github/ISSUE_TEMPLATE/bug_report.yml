@@ -85,7 +85,7 @@ body:
     attributes:
       label: Logs
       description: |
-        Relevant lines from the Logs tab. Remove usernames, passwords, server names, IP addresses, the group and certificate values on the `Executing:` line, and your Mac login name in file paths. Also delete any line that shows the sudo password length.
+        Relevant lines from the Logs tab. Remove usernames, passwords, server names, IP addresses, the group and certificate values on the `Executing:` line, and your Mac login name in file paths. Logs from v1.0.0 can also contain `Set-Cookie` lines and the sudo password length; delete those.
       render: text
   - type: checkboxes
     id: redacted

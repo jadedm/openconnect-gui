@@ -100,7 +100,7 @@ run_case() {
 }
 
 oc=/opt/homebrew/bin/openconnect
-base=(--reconnect-timeout 60 --dtls-ciphers DEFAULT --verbose)
+base=(--reconnect-timeout 60 --dtls-ciphers DEFAULT)
 server=--server=https://vpn.example.com
 
 run_case benign "$oc" -s /opt/homebrew/etc/vpnc/vpnc-script --protocol=anyconnect "$server" "${base[@]}"

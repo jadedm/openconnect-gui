@@ -12,7 +12,9 @@
     "electron:build": "vite build && electron-builder",
     "start": "npm run electron:dev",
     "package": "npm run build && electron-builder",
-    "test:expect": "bash test/vpn-connect.test.sh"
+    "test:expect": "bash test/vpn-connect.test.sh",
+    "test:unit": "node --test test/redact.test.js test/line-logger.test.js test/openconnect-args.test.js",
+    "test": "npm run test:unit && npm run test:expect"
   },
   "keywords": [
     "openconnect",
@@ -52,6 +54,7 @@
     "files": [
       "main.js",
       "preload.js",
+      "lib/**/*",
       "dist/pages/**/*",
       "dist/assets/**/*",
       "assets/**/*",
